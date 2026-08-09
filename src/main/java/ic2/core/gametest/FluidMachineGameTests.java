@@ -30,6 +30,8 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.material.Fluid;
+import net.neoforged.neoforge.capabilities.Capabilities;
+import net.neoforged.neoforge.fluids.capability.IFluidHandlerItem;
 import net.neoforged.neoforge.gametest.GameTestHolder;
 import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 import org.apache.commons.lang3.mutable.MutableObject;
@@ -40,6 +42,21 @@ public class FluidMachineGameTests {
   private static final String EMPTY = "gametest/empty3x3x3";
 
   private static final BlockPos MACHINE_POS = new BlockPos(1, 1, 1);
+
+  // External fluid handlers may inspect stacked containers before deciding whether they can be
+  // transferred. IC2 only supports fluid operations on one cell at a time, so the capability must
+  // report an empty tank instead of passing the stacked item to ItemClassicCell and throwing.
+  @GameTest(template = EMPTY)
+  public static void stackedCellsCanBeSafelyInspectedByFluidHandlers(GameTestHelper helper) {
+    ItemStack stackedCells = new ItemStack(Ic2Items.WATER_CELL, 2);
+    IFluidHandlerItem handler = stackedCells.getCapability(Capabilities.FluidHandler.ITEM);
+
+    helper.assertTrue(handler != null, "water cell should expose an item fluid handler");
+    helper.assertTrue(
+        handler.getFluidInTank(0).isEmpty(),
+        "a stacked fluid container should not expose drainable tank contents");
+    helper.succeed();
+  }
 
   // fluid bottler, drain side: a water cell in the top slot is emptied into the internal tank
   @GameTest(template = EMPTY, timeoutTicks = 300)

@@ -32,7 +32,7 @@ final class ItemFluidCapImpl implements IFluidHandlerItem, Mutable<ItemStack> {
 
   @Override
   public FluidStack getFluidInTank(int tank) {
-    if (tank != 0) {
+    if (tank != 0 || this.stack.getCount() != 1) {
       return FluidStack.EMPTY;
     }
     Ic2FluidItem parent = (Ic2FluidItem) this.stack.getItem();
