@@ -31,7 +31,11 @@ import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.material.Fluid;
 import net.neoforged.neoforge.capabilities.Capabilities;
+import net.neoforged.neoforge.fluids.FluidActionResult;
+import net.neoforged.neoforge.fluids.FluidUtil;
+import net.neoforged.neoforge.fluids.capability.IFluidHandler;
 import net.neoforged.neoforge.fluids.capability.IFluidHandlerItem;
+import net.neoforged.neoforge.fluids.capability.templates.FluidTank;
 import net.neoforged.neoforge.gametest.GameTestHolder;
 import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 import org.apache.commons.lang3.mutable.MutableObject;
@@ -55,6 +59,32 @@ public class FluidMachineGameTests {
     helper.assertTrue(
         handler.getFluidInTank(0).isEmpty(),
         "a stacked fluid container should not expose drainable tank contents");
+    helper.succeed();
+  }
+
+  // Traveler's Backpack first simulates filling the cell, then repeats the operation with execution
+  // enabled. The second call must consume the fluid from the backpack tank.
+  @GameTest(template = EMPTY)
+  public static void fluidUtilFillCellConsumesSourceTank(GameTestHelper helper) {
+    FluidTank sourceTank = new FluidTank(8000);
+    sourceTank.fill(
+        new net.neoforged.neoforge.fluids.FluidStack(
+            net.minecraft.world.level.material.Fluids.WATER, 1000),
+        IFluidHandler.FluidAction.EXECUTE);
+    ItemStack emptyCell = new ItemStack(Ic2Items.EMPTY_CELL);
+
+    FluidActionResult simulated =
+        FluidUtil.tryFillContainer(emptyCell, sourceTank, sourceTank.getCapacity(), null, false);
+    helper.assertTrue(simulated.isSuccess(), "cell fill simulation should succeed");
+    helper.assertValueEqual(sourceTank.getFluidAmount(), 1000, "tank content after simulation");
+
+    FluidActionResult executed =
+        FluidUtil.tryFillContainer(emptyCell, sourceTank, sourceTank.getCapacity(), null, true);
+    helper.assertTrue(executed.isSuccess(), "executed cell fill should succeed");
+    helper.assertTrue(
+        executed.getResult().getItem() == Ic2Items.WATER_CELL,
+        "executed fill should produce a water cell, got " + executed.getResult());
+    helper.assertValueEqual(sourceTank.getFluidAmount(), 0, "tank content after executed fill");
     helper.succeed();
   }
 

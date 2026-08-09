@@ -50,7 +50,7 @@ final class ItemFluidCapImpl implements IFluidHandlerItem, Mutable<ItemStack> {
     if (amount > 0 && this.stack.getCount() == 1) {
       Ic2FluidItem parent = (Ic2FluidItem) this.stack.getItem();
       return EnvFluidHandlerForge.getForgeFs(
-          parent.drainMb(this.stack, amount, action.simulate(), this));
+          parent.drainMb(this.stack, amount, action.simulate(), action.execute() ? this : null));
     } else {
       return FluidStack.EMPTY;
     }
@@ -61,7 +61,11 @@ final class ItemFluidCapImpl implements IFluidHandlerItem, Mutable<ItemStack> {
     if (resource != null && !resource.isEmpty() && this.stack.getCount() == 1) {
       Ic2FluidItem parent = (Ic2FluidItem) this.stack.getItem();
       int amount =
-          parent.drainMb(this.stack, new Ic2FluidStackImpl(resource), action.simulate(), this);
+          parent.drainMb(
+              this.stack,
+              new Ic2FluidStackImpl(resource),
+              action.simulate(),
+              action.execute() ? this : null);
       if (amount <= 0) {
         return FluidStack.EMPTY;
       }
@@ -77,7 +81,11 @@ final class ItemFluidCapImpl implements IFluidHandlerItem, Mutable<ItemStack> {
   public int fill(FluidStack resource, IFluidHandler.FluidAction action) {
     if (resource != null && !resource.isEmpty() && this.stack.getCount() == 1) {
       Ic2FluidItem parent = (Ic2FluidItem) this.stack.getItem();
-      return parent.fillMb(this.stack, new Ic2FluidStackImpl(resource), action.simulate(), this);
+      return parent.fillMb(
+          this.stack,
+          new Ic2FluidStackImpl(resource),
+          action.simulate(),
+          action.execute() ? this : null);
     } else {
       return 0;
     }
