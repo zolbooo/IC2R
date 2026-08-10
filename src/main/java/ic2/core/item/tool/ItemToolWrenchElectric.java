@@ -59,6 +59,16 @@ public class ItemToolWrenchElectric extends ItemElectricTool
   @Override
   public InteractionResult onBlockStartBreak(
       Player player, Level world, InteractionHand hand, BlockPos pos, Direction direction) {
+    BlockState state = world.getBlockState(pos);
+    if (state.getDestroySpeed(world, pos) < 0.0F) {
+      ItemStack stack = player.getMainHandItem();
+      if (this.canTakeDamage(stack, MINE_ENERGY_UNITS)
+          && ItemToolWrench.tryRemoveWithWrench(world, player, pos, state)) {
+        this.consumeEnergy(stack, MINE_ENERGY_UNITS, player);
+        return InteractionResult.SUCCESS;
+      }
+    }
+
     return InteractionResult.PASS;
   }
 

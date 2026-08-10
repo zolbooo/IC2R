@@ -1,11 +1,14 @@
 package ic2.core.gametest;
 
+import com.mojang.authlib.GameProfile;
 import ic2.api.item.ElectricItem;
+import ic2.core.block.personal.TileEntityPersonalChest;
 import ic2.core.block.tileentity.Ic2TileEntityBlock;
 import ic2.core.item.ElectricItemManager;
 import ic2.core.item.tool.ItemToolWrenchElectric;
 import ic2.core.ref.Ic2Blocks;
 import ic2.core.ref.Ic2Items;
+import java.util.UUID;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.gametest.framework.GameTest;
@@ -82,6 +85,64 @@ public class ElectricWrenchGameTests {
           helper.assertValueEqual(
               ElectricItem.manager.getCharge(stack), MAX_CHARGE - 100.0, "charge after mining");
         });
+  }
+
+  @GameTest(template = EMPTY)
+  public static void electricWrenchBreaksOwnedEmptyPersonalSafe(GameTestHelper helper) {
+    helper.setBlock(MACHINE_POS, Ic2Blocks.PERSONAL_CHEST);
+    TileEntityPersonalChest safe = helper.getBlockEntity(MACHINE_POS);
+    ServerPlayer owner = makePlayer(helper);
+    safe.setOwner(owner.getGameProfile());
+    ItemStack stack =
+        ElectricItemManager.getCharged(Ic2Items.ELECTRIC_WRENCH, Double.POSITIVE_INFINITY);
+    owner.setItemInHand(InteractionHand.MAIN_HAND, stack);
+
+    InteractionResult result =
+        wrench()
+            .onBlockStartBreak(
+                owner,
+                helper.getLevel(),
+                InteractionHand.MAIN_HAND,
+                helper.absolutePos(MACHINE_POS),
+                Direction.NORTH);
+
+    helper.assertValueEqual(result, InteractionResult.SUCCESS, "wrench break result");
+    helper.succeedWhen(
+        () -> {
+          helper.assertBlockPresent(Blocks.AIR, MACHINE_POS);
+          helper.assertItemEntityPresent(Ic2Blocks.PERSONAL_CHEST.asItem(), MACHINE_POS, 2.0);
+          helper.assertValueEqual(
+              ElectricItem.manager.getCharge(stack), MAX_CHARGE - 100.0, "charge after mining");
+        });
+  }
+
+  @GameTest(template = EMPTY)
+  public static void electricWrenchCannotBreakAnotherPlayersPersonalSafe(GameTestHelper helper) {
+    helper.setBlock(MACHINE_POS, Ic2Blocks.PERSONAL_CHEST);
+    TileEntityPersonalChest safe = helper.getBlockEntity(MACHINE_POS);
+    safe.setOwner(
+        new GameProfile(
+            UUID.fromString("5de649d8-78d4-4d55-a34d-135d3f89a01f"), "SafeOwner"));
+    ServerPlayer stranger = makePlayer(helper);
+    ItemStack stack =
+        ElectricItemManager.getCharged(Ic2Items.ELECTRIC_WRENCH, Double.POSITIVE_INFINITY);
+    stranger.setItemInHand(InteractionHand.MAIN_HAND, stack);
+
+    InteractionResult result =
+        wrench()
+            .onBlockStartBreak(
+                stranger,
+                helper.getLevel(),
+                InteractionHand.MAIN_HAND,
+                helper.absolutePos(MACHINE_POS),
+                Direction.NORTH);
+
+    helper.assertValueEqual(result, InteractionResult.PASS, "wrench break result");
+    helper.assertBlockPresent(Ic2Blocks.PERSONAL_CHEST, MACHINE_POS);
+    helper.assertItemEntityNotPresent(Ic2Blocks.PERSONAL_CHEST.asItem(), MACHINE_POS, 2.0);
+    helper.assertValueEqual(
+        ElectricItem.manager.getCharge(stack), MAX_CHARGE, "charge after denied mining");
+    helper.succeed();
   }
 
   @GameTest(template = EMPTY)
