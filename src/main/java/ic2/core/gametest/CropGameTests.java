@@ -28,6 +28,7 @@ import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.tags.BlockTags;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.effect.MobEffectInstance;
@@ -112,6 +113,44 @@ public class CropGameTests {
     }
 
     return false;
+  }
+
+  @GameTest(template = EMPTY)
+  public static void everyCropStickStateIsMineableWithAnAxe(GameTestHelper helper) {
+    helper.assertTrue(
+        Ic2Blocks.CROP_STICK.defaultBlockState().is(BlockTags.MINEABLE_WITH_AXE),
+        "empty crop sticks should be axe-mineable");
+
+    for (Ic2CropType type : Ic2CropType.values()) {
+      if (type == Ic2CropType.none) {
+        continue;
+      }
+
+      CropCard card = Crops.instance.getCropCard(type.getOwner(), type.getName());
+      helper.assertTrue(card != null, "missing crop card for " + type.getName());
+      helper.assertTrue(
+          card.getCropBlock().defaultBlockState().is(BlockTags.MINEABLE_WITH_AXE),
+          type.getName() + " crop sticks should be axe-mineable");
+    }
+
+    helper.succeed();
+  }
+
+  @GameTest(template = EMPTY)
+  public static void axeBreaksEmptyAndPlantedCropSticksFaster(GameTestHelper helper) {
+    ItemStack axe = new ItemStack(Items.IRON_AXE);
+    placeCropStick(helper, CROP_POS);
+    helper.assertValueEqual(
+        axe.getDestroySpeed(helper.getBlockState(CROP_POS)),
+        6.0F,
+        "iron axe speed on empty crop sticks");
+
+    plant(helper, CROP_POS, Ic2Crops.cropWheat, 1, 0, 0, 0);
+    helper.assertValueEqual(
+        axe.getDestroySpeed(helper.getBlockState(CROP_POS)),
+        6.0F,
+        "iron axe speed on planted crop sticks");
+    helper.succeed();
   }
 
   // Add-on crops may use the generic crop-stick block and store their age in the tile entity.
