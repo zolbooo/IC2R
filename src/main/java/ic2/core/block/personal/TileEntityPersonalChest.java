@@ -6,6 +6,8 @@ import ic2.core.IC2;
 import ic2.core.IHasGui;
 import ic2.core.block.invslot.InvSlot;
 import ic2.core.block.tileentity.TileEntityInventory;
+import ic2.core.item.tool.ItemToolWrench;
+import ic2.core.item.tool.ItemToolWrenchElectric;
 import ic2.core.gui.dynamic.DynamicContainer;
 import ic2.core.gui.dynamic.GuiParser;
 import ic2.core.network.GrowingBuffer;
@@ -274,6 +276,18 @@ public class TileEntityPersonalChest extends TileEntityInventory
   @Override
   protected boolean canEntityDestroy(Entity entity) {
     return false;
+  }
+
+  @Override
+  protected InteractionResult onClicked(Player player) {
+    ItemStack stack = player.getMainHandItem();
+    boolean usableWrench =
+        stack.getItem() instanceof ItemToolWrench
+            || stack.getItem() instanceof ItemToolWrenchElectric electricWrench
+                && electricWrench.canTakeDamage(stack, 1.0);
+    return usableWrench && this.wrenchCanRemove(player)
+        ? InteractionResult.PASS
+        : InteractionResult.FAIL;
   }
 
   @Override

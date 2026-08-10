@@ -322,12 +322,15 @@ public class ItemToolWrench extends Item
       BlockPos pos,
       BlockState state,
       @Nullable BlockEntity blockEntity) {
-    if (tryRemoveWithWrench(world, player, pos, state)) {
-      player.getMainHandItem().hurtAndBreak(MINE_DAMAGE, player, EquipmentSlot.MAINHAND);
-      return false;
+    if (!(state.getBlock() instanceof IWrenchAble)) {
+      return true;
     }
 
-    return true;
+    if (tryRemoveWithWrench(world, player, pos, state)) {
+      player.getMainHandItem().hurtAndBreak(MINE_DAMAGE, player, EquipmentSlot.MAINHAND);
+    }
+
+    return false;
   }
 
   @Override

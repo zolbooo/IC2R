@@ -1399,7 +1399,7 @@ public final class Ic2Blocks {
           Ic2TileEntityBlock.create(
               Properties.of()
                   .mapColor(MapColor.COLOR_LIGHT_GRAY)
-                  .strength(-1.0F, 3600000.0F)
+                  .strength(2.0F, 3600000.0F)
                   .requiresCorrectToolForDrops()
                   .sound(SoundType.METAL),
               TileEntityPersonalChest.class,

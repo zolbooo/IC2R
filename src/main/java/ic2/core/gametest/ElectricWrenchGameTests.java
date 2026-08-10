@@ -4,6 +4,7 @@ import com.mojang.authlib.GameProfile;
 import ic2.api.item.ElectricItem;
 import ic2.core.block.personal.TileEntityPersonalChest;
 import ic2.core.block.tileentity.Ic2TileEntityBlock;
+import ic2.core.event.EventHandler;
 import ic2.core.item.ElectricItemManager;
 import ic2.core.item.tool.ItemToolWrenchElectric;
 import ic2.core.ref.Ic2Blocks;
@@ -17,6 +18,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.block.Blocks;
 import net.neoforged.neoforge.gametest.GameTestHolder;
@@ -30,6 +32,7 @@ public class ElectricWrenchGameTests {
   private static final double MAX_CHARGE = 12000.0;
 
   private static final BlockPos MACHINE_POS = new BlockPos(1, 1, 1);
+  private static final BlockPos SECOND_MACHINE_POS = new BlockPos(1, 1, 2);
 
   private static ItemToolWrenchElectric wrench() {
     return (ItemToolWrenchElectric) Ic2Items.ELECTRIC_WRENCH;
@@ -90,6 +93,7 @@ public class ElectricWrenchGameTests {
   @GameTest(template = EMPTY)
   public static void electricWrenchBreaksOwnedEmptyPersonalSafe(GameTestHelper helper) {
     helper.setBlock(MACHINE_POS, Ic2Blocks.PERSONAL_CHEST);
+    helper.setBlock(SECOND_MACHINE_POS, Ic2Blocks.GENERATOR);
     TileEntityPersonalChest safe = helper.getBlockEntity(MACHINE_POS);
     ServerPlayer owner = makePlayer(helper);
     safe.setOwner(owner.getGameProfile());
@@ -98,15 +102,28 @@ public class ElectricWrenchGameTests {
     owner.setItemInHand(InteractionHand.MAIN_HAND, stack);
 
     InteractionResult result =
-        wrench()
-            .onBlockStartBreak(
-                owner,
-                helper.getLevel(),
-                InteractionHand.MAIN_HAND,
-                helper.absolutePos(MACHINE_POS),
-                Direction.NORTH);
+        EventHandler.onBlockStartBreak(
+            owner,
+            helper.getLevel(),
+            InteractionHand.MAIN_HAND,
+            helper.absolutePos(MACHINE_POS),
+            Direction.NORTH);
 
-    helper.assertValueEqual(result, InteractionResult.SUCCESS, "wrench break result");
+    helper.assertValueEqual(result, InteractionResult.PASS, "wrench break start result");
+    helper.assertBlockPresent(Ic2Blocks.PERSONAL_CHEST, MACHINE_POS);
+    helper.assertValueEqual(
+        ElectricItem.manager.getCharge(stack), MAX_CHARGE, "charge when mining starts");
+    helper.assertValueEqual(
+        helper
+            .getBlockState(MACHINE_POS)
+            .getDestroyProgress(owner, helper.getLevel(), helper.absolutePos(MACHINE_POS)),
+        helper
+            .getBlockState(SECOND_MACHINE_POS)
+            .getDestroyProgress(owner, helper.getLevel(), helper.absolutePos(SECOND_MACHINE_POS)),
+        "safe and regular machine destroy progress");
+
+    playerMineBlock(helper, owner, MACHINE_POS);
+
     helper.succeedWhen(
         () -> {
           helper.assertBlockPresent(Blocks.AIR, MACHINE_POS);
@@ -129,20 +146,69 @@ public class ElectricWrenchGameTests {
     stranger.setItemInHand(InteractionHand.MAIN_HAND, stack);
 
     InteractionResult result =
-        wrench()
-            .onBlockStartBreak(
-                stranger,
-                helper.getLevel(),
-                InteractionHand.MAIN_HAND,
-                helper.absolutePos(MACHINE_POS),
-                Direction.NORTH);
+        EventHandler.onBlockStartBreak(
+            stranger,
+            helper.getLevel(),
+            InteractionHand.MAIN_HAND,
+            helper.absolutePos(MACHINE_POS),
+            Direction.NORTH);
 
-    helper.assertValueEqual(result, InteractionResult.PASS, "wrench break result");
+    helper.assertValueEqual(result, InteractionResult.FAIL, "wrench break start result");
     helper.assertBlockPresent(Ic2Blocks.PERSONAL_CHEST, MACHINE_POS);
     helper.assertItemEntityNotPresent(Ic2Blocks.PERSONAL_CHEST.asItem(), MACHINE_POS, 2.0);
     helper.assertValueEqual(
         ElectricItem.manager.getCharge(stack), MAX_CHARGE, "charge after denied mining");
     helper.succeed();
+  }
+
+  @GameTest(template = EMPTY)
+  public static void nonWrenchCannotMinePersonalSafe(GameTestHelper helper) {
+    helper.setBlock(MACHINE_POS, Ic2Blocks.PERSONAL_CHEST);
+    TileEntityPersonalChest safe = helper.getBlockEntity(MACHINE_POS);
+    ServerPlayer owner = makePlayer(helper);
+    safe.setOwner(owner.getGameProfile());
+    owner.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(Items.IRON_PICKAXE));
+
+    InteractionResult result =
+        EventHandler.onBlockStartBreak(
+            owner,
+            helper.getLevel(),
+            InteractionHand.MAIN_HAND,
+            helper.absolutePos(MACHINE_POS),
+            Direction.NORTH);
+
+    helper.assertValueEqual(result, InteractionResult.FAIL, "pickaxe break start result");
+    helper.assertBlockPresent(Ic2Blocks.PERSONAL_CHEST, MACHINE_POS);
+    helper.succeed();
+  }
+
+  @GameTest(template = EMPTY)
+  public static void underchargedElectricWrenchCannotMinePersonalSafe(GameTestHelper helper) {
+    helper.setBlock(MACHINE_POS, Ic2Blocks.PERSONAL_CHEST);
+    TileEntityPersonalChest safe = helper.getBlockEntity(MACHINE_POS);
+    ServerPlayer owner = makePlayer(helper);
+    safe.setOwner(owner.getGameProfile());
+    ItemStack stack = ElectricItemManager.getCharged(Ic2Items.ELECTRIC_WRENCH, 99.0);
+    owner.setItemInHand(InteractionHand.MAIN_HAND, stack);
+
+    InteractionResult result =
+        EventHandler.onBlockStartBreak(
+            owner,
+            helper.getLevel(),
+            InteractionHand.MAIN_HAND,
+            helper.absolutePos(MACHINE_POS),
+            Direction.NORTH);
+
+    helper.assertValueEqual(result, InteractionResult.FAIL, "wrench break start result");
+    helper.assertBlockPresent(Ic2Blocks.PERSONAL_CHEST, MACHINE_POS);
+    helper.assertValueEqual(
+        ElectricItem.manager.getCharge(stack), 99.0, "charge after denied mining");
+    helper.succeed();
+  }
+
+  private static void playerMineBlock(
+      GameTestHelper helper, ServerPlayer player, BlockPos relativePos) {
+    player.gameMode.destroyBlock(helper.absolutePos(relativePos));
   }
 
   @GameTest(template = EMPTY)
