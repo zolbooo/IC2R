@@ -86,8 +86,14 @@ public class TileEntityReactorChamberElectric extends Ic2TileEntity
   protected void onNeighborChange(Block neighbor, BlockPos neighborPos) {
     super.onNeighborChange(neighbor, neighborPos);
     this.lastReactorUpdate = 0L;
-    if (this.getReactor() == null) {
+    TileEntityNuclearReactorElectric reactor = this.getReactor();
+    if (reactor == null) {
       this.destroyChamber(true);
+    } else if (!this.getLevel().isClientSide) {
+      if (this.redstone.isLinked() && this.redstone.getLinkReceiver() != reactor.redstone) {
+        this.redstone.unlinkOutbound();
+      }
+      this.redstone.linkTo(reactor.redstone);
     }
   }
 
@@ -174,7 +180,7 @@ public class TileEntityReactorChamberElectric extends Ic2TileEntity
   }
 
   public TileEntityNuclearReactorElectric getReactorInstance() {
-    return this.reactor;
+    return this.getReactor();
   }
 
   @Override

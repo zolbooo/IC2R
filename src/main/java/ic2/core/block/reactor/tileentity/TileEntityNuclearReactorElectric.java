@@ -281,8 +281,10 @@ public class TileEntityNuclearReactorElectric extends TileEntityInventory
 
     for (Direction dir : Util.ALL_DIRS) {
       BlockEntity te = world.getBlockEntity(this.worldPosition.relative(dir));
-      if (te instanceof TileEntityReactorChamberElectric && !te.isRemoved()) {
-        newSubTiles.add((TileEntityReactorChamberElectric) te);
+      if (te instanceof TileEntityReactorChamberElectric chamber
+          && !te.isRemoved()
+          && chamber.getReactorInstance() == this) {
+        newSubTiles.add(chamber);
       }
     }
 
@@ -537,7 +539,8 @@ public class TileEntityNuclearReactorElectric extends TileEntityInventory
 
     for (Direction dir : Util.ALL_DIRS) {
       BlockEntity target = world.getBlockEntity(this.worldPosition.relative(dir));
-      if (target instanceof TileEntityReactorChamberElectric) {
+      if (target instanceof TileEntityReactorChamberElectric chamber
+          && chamber.getReactorInstance() == this) {
         cols++;
       }
     }
@@ -799,9 +802,10 @@ public class TileEntityNuclearReactorElectric extends TileEntityInventory
     for (Direction facing : Util.ALL_DIRS) {
       BlockPos cPos = this.worldPosition.relative(facing);
       if (world.getBlockEntity(cPos) instanceof TileEntityReactorChamberElectric chamber) {
-        if (chamber.redstone.isLinked() && chamber.redstone.getLinkReceiver() != this.redstone) {
-          chamber.destroyChamber(true);
-        } else {
+        if (chamber.getReactorInstance() == this) {
+          if (chamber.redstone.isLinked() && chamber.redstone.getLinkReceiver() != this.redstone) {
+            chamber.redstone.unlinkOutbound();
+          }
           chamber.redstone.linkTo(this.redstone);
         }
       }

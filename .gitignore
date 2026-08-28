@@ -3,6 +3,7 @@
 .vscode/
 bin/
 .gradle/
+.gradle-user-home/
 build/
 run/
 out/

@@ -25,10 +25,7 @@ public class Ic2Potion extends MobEffect {
 
   public boolean applyEffectTick(LivingEntity entity, int amplifier) {
     if (this == radiation) {
-      if (Ic2DamageSource.radiation == null) {
-        Ic2DamageSource.init(entity.level().registryAccess());
-      }
-      entity.hurt(Ic2DamageSource.radiation, (float) amplifier / 100 + 0.5F);
+      entity.hurt(Ic2DamageSource.radiation(entity.level()), (float) amplifier / 100 + 0.5F);
     }
 
     return true;

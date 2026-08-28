@@ -12,8 +12,10 @@ import ic2.core.recipe.v2.CannerEnrichRecipeSerializer;
 import ic2.core.recipe.v2.IntegerOutputRecipeSerializer;
 import ic2.core.recipe.v2.WeightedMachineRecipeSerializer;
 import java.util.function.Function;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.util.GsonHelper;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.crafting.RecipeSerializer;
 
 public final class Ic2RecipeSerializers {
@@ -57,8 +59,7 @@ public final class Ic2RecipeSerializers {
           new BasicMachineRecipeSerializer(Ic2RecipeTypes.METAL_FORMER_ROLLING, null));
   public static final BasicMachineRecipeSerializer ORE_WASHER =
       register(
-          "ore_washer",
-          new BasicMachineRecipeSerializer(Ic2RecipeTypes.ORE_WASHER, intMeta("amount")));
+          "ore_washer", new BasicMachineRecipeSerializer(Ic2RecipeTypes.ORE_WASHER, oreWasherMeta()));
   public static final IntegerOutputRecipeSerializer MATTER_FABRICATOR =
       register(
           "matter_fabricator",
@@ -91,6 +92,34 @@ public final class Ic2RecipeSerializers {
       CompoundTag nbt = new CompoundTag();
       nbt.putInt("fluid", metaValue1);
       nbt.putInt("duration", metaValue2);
+      return nbt;
+    };
+  }
+
+  private static Function<JsonObject, CompoundTag> oreWasherMeta() {
+    return json -> {
+      CompoundTag nbt = new CompoundTag();
+      nbt.putInt("amount", GsonHelper.getAsInt(json, "amount"));
+
+      if (json.has("bonus")) {
+        JsonObject bonus = GsonHelper.getAsJsonObject(json, "bonus");
+        Item item = GsonHelper.getAsItem(bonus, "item").value();
+        float chance = GsonHelper.getAsFloat(bonus, "chance");
+
+        if (chance <= 0.0F || chance > 1.0F) {
+          throw new IllegalArgumentException("Ore washer bonus chance must be in the range (0, 1]");
+        }
+
+        int count = GsonHelper.getAsInt(bonus, "count", 1);
+        if (count < 1) {
+          throw new IllegalArgumentException("Ore washer bonus count must be positive");
+        }
+
+        nbt.putString("bonusItem", BuiltInRegistries.ITEM.getKey(item).toString());
+        nbt.putInt("bonusCount", count);
+        nbt.putFloat("bonusChance", chance);
+      }
+
       return nbt;
     };
   }
