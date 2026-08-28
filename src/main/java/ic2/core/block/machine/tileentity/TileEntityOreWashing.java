@@ -16,10 +16,14 @@ import ic2.core.network.GrowingBuffer;
 import ic2.core.network.GuiSynced;
 import ic2.core.profile.NotClassic;
 import ic2.core.ref.Ic2BlockEntities;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.EnumSet;
 import java.util.Set;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
@@ -81,6 +85,25 @@ public class TileEntityOreWashing
 
   public boolean gainFluid() {
     return this.fluidSlot.processIntoTank(this.fluidTank, this.cellSlot);
+  }
+
+  @Override
+  protected Collection<ItemStack> getOutput(Collection<ItemStack> output) {
+    Collection<ItemStack> result = new ArrayList<>(super.getOutput(output));
+    MachineRecipeResult<IRecipeInput, Collection<ItemStack>, ItemStack> recipe =
+        this.inputSlot.process();
+    CompoundTag metadata = recipe != null ? recipe.recipe().getMetaData() : null;
+
+    if (metadata != null
+        && metadata.contains("bonusItem")
+        && this.level.random.nextFloat() < metadata.getFloat("bonusChance")) {
+      BuiltInRegistries.ITEM
+          .getOptional(ResourceLocation.parse(metadata.getString("bonusItem")))
+          .ifPresent(
+              item -> result.add(new ItemStack(item, metadata.getInt("bonusCount"))));
+    }
+
+    return result;
   }
 
   @Override

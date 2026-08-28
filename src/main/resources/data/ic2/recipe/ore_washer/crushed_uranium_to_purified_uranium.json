@@ -10,10 +10,11 @@
     {
       "item": "ic2:small_lead_dust",
       "count": 2
-    },
-    {
-      "item": "ic2:stone_dust"
     }
   ],
+  "bonus": {
+    "item": "ic2:iridium_shard",
+    "chance": 0.01
+  },
   "amount": 1000
 }
