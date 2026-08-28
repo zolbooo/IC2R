@@ -116,10 +116,7 @@ public class Ic2Explosion extends Explosion {
     this.areaX = Util.roundToNegInf(x) - maxDistanceInt;
     this.areaZ = Util.roundToNegInf(z) - maxDistanceInt;
     if (this.type == Ic2Explosion.Type.ReactorMeltdown) {
-      if (Ic2DamageSource.reactorExplosion == null) {
-        Ic2DamageSource.init(this.worldObj.registryAccess());
-      }
-      this.damageSource = Ic2DamageSource.reactorExplosion;
+      this.damageSource = Ic2DamageSource.reactorExplosion(this.worldObj);
     } else if (this.isNuclear()) {
       this.damageSource = Ic2DamageSource.getNukeSource(igniter, this.worldObj);
     } else {

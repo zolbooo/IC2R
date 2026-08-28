@@ -7,6 +7,7 @@ import ic2.core.block.reactor.tileentity.TileEntityNuclearReactorElectric;
 import ic2.core.block.reactor.tileentity.TileEntityRCI_LZH;
 import ic2.core.block.reactor.tileentity.TileEntityRCI_RSH;
 import ic2.core.block.reactor.tileentity.TileEntityReactorAccessHatch;
+import ic2.core.block.reactor.tileentity.TileEntityReactorChamberElectric;
 import ic2.core.block.reactor.tileentity.TileEntityReactorFluidPort;
 import ic2.core.block.tileentity.Ic2TileEntityBlock;
 import ic2.core.block.wiring.tileentity.TileEntityElectricCESU;
@@ -216,6 +217,27 @@ public class ReactorGameTests {
               reactor.reactorSlot.size(), 30, "usable grid slots with two chambers");
           helper.assertValueEqual(
               reactor.getSubTiles().size(), 3, "energy net sub-tiles with two chambers");
+        });
+  }
+
+  // A chamber shared by two reactors belongs to the first reactor in the fixed Direction order.
+  // The other reactor must ignore it instead of destroying the chamber during redstone linking.
+  @GameTest(template = EMPTY)
+  public static void sharedChamberBindsToOneReactorWithoutBreaking(GameTestHelper helper) {
+    TileEntityNuclearReactorElectric westReactor = placeReactor(helper, new BlockPos(0, 1, 1));
+    TileEntityNuclearReactorElectric eastReactor = placeReactor(helper, new BlockPos(2, 1, 1));
+    helper.setBlock(REACTOR_POS, Ic2Blocks.REACTOR_CHAMBER);
+    TileEntityReactorChamberElectric chamber =
+        getTe(helper, REACTOR_POS, TileEntityReactorChamberElectric.class);
+
+    helper.succeedWhen(
+        () -> {
+          helper.assertBlockPresent(Ic2Blocks.REACTOR_CHAMBER, REACTOR_POS);
+          helper.assertTrue(
+              chamber.getReactorInstance() == westReactor,
+              "shared chamber should bind to the west reactor first");
+          helper.assertValueEqual(westReactor.getReactorSize(), 4, "west reactor chamber columns");
+          helper.assertValueEqual(eastReactor.getReactorSize(), 3, "east reactor must ignore shared chamber");
         });
   }
 
@@ -1211,10 +1233,14 @@ public class ReactorGameTests {
 
     // the radiation roll is 0-3 damage per work tick (one every 20 ticks), so wait for a hit
     helper.succeedWhen(
-        () ->
-            helper.assertTrue(
-                pig.getHealth() < pig.getMaxHealth(),
-                "a reactor at 75% heat should radiation-damage the pig next to it"));
+        () -> {
+          helper.assertTrue(
+              pig.getHealth() < pig.getMaxHealth(),
+              "a reactor at 75% heat should radiation-damage the pig next to it");
+          helper.assertTrue(
+              Ic2DamageSource.radiation == null,
+              "radiation effect must use the current level damage source instead of the static one");
+        });
   }
 
   private static TileEntityNuclearReactorElectric placeReactor(GameTestHelper helper) {

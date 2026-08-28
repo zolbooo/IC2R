@@ -48,6 +48,10 @@ public class Ic2DamageSource {
     return level.damageSources().source(RADIATION);
   }
 
+  public static DamageSource reactorExplosion(Level level) {
+    return level.damageSources().source(REACTOR_EXPLOSION);
+  }
+
   public static DamageSource hydrogenExplosion(Level level) {
     return new DamageSource(
         level
@@ -58,14 +62,10 @@ public class Ic2DamageSource {
 
   public static DamageSource getNukeSource(LivingEntity igniter, Level level) {
     if (igniter != null) {
-      return new DamageSource(
-          level.registryAccess().registryOrThrow(Registries.DAMAGE_TYPE).getHolderOrThrow(NUKE),
-          igniter);
+      return level.damageSources().source(NUKE, igniter);
     }
-    if (nuke == null) {
-      init(level.registryAccess());
-    }
-    return nuke;
+
+    return level.damageSources().source(NUKE);
   }
 
   public static DamageSource create(Level level, String name) {
